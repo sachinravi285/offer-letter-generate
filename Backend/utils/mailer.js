@@ -1,113 +1,122 @@
-import dotenv from "dotenv";
-dotenv.config(); // ✅ Must load before using env vars
-
 import nodemailer from "nodemailer";
 
-// ✅ Create reusable transporter
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true, // true for Gmail 465
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+// ✅ Company Info + Email credentials (Hardcoded)
+const companies = {
+  "Training Trains": {
+    website: "https://trainingtrains.com",
+    email: "",
+    pass: "",
+    smtpHost: "",
   },
-});
+  Domainhostly: {
+    website: "https://domainhostly.com",
+    email: "",
+    pass: "",
+    smtpHost: "",
+  },
+  W3AppDevelopers: {
+    website: "https://w3appdevelopers.com",
+    email: "",
+    pass: "",
+    smtpHost: "",
+  },
+};
 
-// ✅ HTML offer letter with fallback values
-const generateOfferLetterHTML = (data) => `
-  <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
-    <h2 style="color:#2c3e50; text-align:center;">Internship Offer Letter</h2>
+const FIXED_COLLAB_ORDER = ["Training Trains", "Domainhostly", "W3AppDevelopers"];
 
-    <p>
-      <b>Name:</b> ${data.name ?? "Not Provided"} (${data.registerNo ?? "-"})
-      <br/>
-      <b>Email:</b> ${data.email ?? "Not Provided"}
-      <br/>
-      <b>Department:</b> ${data.department ?? "Department Not Provided"}
-      <br/>
-      <b>College:</b> ${data.college ?? "College Not Provided"}
-    </p>
+function getTransporter(company) {
+  const selected = companies[company] || companies["Training Trains"];
+  return nodemailer.createTransport({
+    host: selected.smtpHost,
+    port: 465,
+    secure: true,
+    auth: {
+      user: selected.email,
+      pass: selected.pass,
+    },
+  });
+}
 
-    <p>Dear <b>${data.name ?? "Student"} (${data.registerNo ?? "-"})</b>,</p>
+function getCollaborationCompanies(mainCompany) {
+  return FIXED_COLLAB_ORDER.filter((c) => c !== mainCompany).join(" & ");
+}
 
-    <p>
-      In reference to your application, we would like to congratulate you on being selected for an internship with 
-      <b>${data.company ?? "Our Company"}</b>. 
-      You will work as an intern with our development company Domainhostly and W3AppDevelopers, located at Coimbatore and Erode. 
+function generateOfferLetterHTML(data) {
+  const mainCompany = data.company && companies[data.company] ? data.company : "Training Trains";
+  const mainWebsite = companies[mainCompany].website;
+  const collaborationCompanies = getCollaborationCompanies(mainCompany);
+
+  return `
+  <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; padding: 15px;">
+    <p><b>Name:</b> ${data.name} (${data.registerNo})<br/>
+    <b>Gmail:</b> ${data.email}<br/>
+    <b>Department:</b> ${data.department}<br/>
+    <b>College:</b> ${data.college}</p>
+
+    <p>Dear <b>${data.name} (${data.registerNo})</b>,</p>
+
+    <p style="text-align: justify;">
+      In reference to your application we would like to congratulate you on being selected for internship with <b>${mainCompany}</b>. 
+      You have to work as an intern with our development company <b>${collaborationCompanies}</b> which is located at Coimbatore and Erode. 
       Your training is scheduled to start effectively this week. 
-      ${data.companyWebsite ? `Visit <a href="${data.companyWebsite}" target="_blank">${data.companyWebsite}</a> for more info.` : ""}
-      We are excited that you will be joining our team!
+      <a href="${mainWebsite}" target="_blank">${mainWebsite}</a> are excited that you will be joining our team!
+    </p>
+
+    <h3>Collaboration Companies:</h3>
+    <p><b>Training Trains:</b> ... Web: trainingtrains.com</p>
+    <p><b>Domainhostly:</b> ... Web: domainhostly.com</p>
+    <p><b>W3AppDevelopers:</b> ... Web: w3appdevelopers.com</p>
+
+    <p style="text-align: justify;">
+      Your internship will include training/orientation and focus primarily on learning, gaining skills and understanding the concepts you learned in class through hands-on application.
     </p>
 
     <p>
-      <b>W3AppDevelopers</b> is a Web and Mobile App Development Company specializing in Android and Web applications. <br/>
-      <b>Domainhostly</b>: Looking for website domain and hosting? Get an all-inclusive plan and go live instantly! 
-      Create your ideal website in minutes. Try Domainhostly’s best-ranked web hosting plans. 
-      Fast Web Hosting, Easy-to-use cPanel & 1-Click CMS Install. Choose from Linux Shared, Cloud, VPS & Dedicated hosting.
+      Please confirm your internship with your HOD and Class Advisor and submit your permission letter.<br/>
+      Come and visit our company on <b>${data.fromDate}</b><br/>
+      Internship duration: <b>${data.fromDate}</b> to <b>${data.toDate}</b>
     </p>
 
     <p>
-      As such, your internship will include training/orientation and focus primarily on learning and developing new skills, 
-      gaining knowledge and understanding the concepts you learned in class through hands-on application. 
-      This internship will be very useful for your career.
-    </p>
-
-    <p>
-      The project details and technical platform will be shared with you on or before commencement of training.
-    </p>
-
-    <p>
-      Please confirm your internship with your HOD and Class Advisor and submit your permission letter. 
-      Come and visit our company on <b>${data.fromDate ?? "the mentioned date"}</b>.
-    </p>
-
-    <h3>📍 Training Location:</h3>
-    <p>
-      <b>${data.company ?? "Domainhostly.com"}</b><br/>
-      Web: <a href="${data.companyWebsite ?? 'https://www.domainhostly.com'}" target="_blank">
-        ${data.companyWebsite ?? 'www.domainhostly.com'}
-      </a><br/>
+      Report to:<br/>
+      <a href="${mainWebsite}" target="_blank">${mainWebsite}</a><br/>
+      <b>Contact Person:</b> Boopathi Kumar K<br/>
       Call: +91 96985 48633<br/>
-      Contact Person: <b>Boopathi Kumar K</b>
+      Address:<br/>
+      332 Mullamparappu, N.G.Palayam Post, Erode, Tamil Nadu 638115<br/>
+      Location: <a href="https://maps.app.goo.gl/1HEqmSsf3mdXzR7g6" target="_blank">Google Maps</a>
     </p>
 
-    <p>
-      Again, congratulations and we look forward to working with you.
-    </p>
+    <p>Again, congratulations and we look forward to working with you.</p>
 
     <p>
-      Yours sincerely,<br/>
-      <b>${data.company ?? "Company"} Team</b><br/>
+      Yours sincerely,<br/><br/>
+      <b>${mainCompany} Team</b><br/>
       K. Boopathi Kumar<br/>
-      CEO and Founder
+      CEO & Founder
     </p>
 
     <hr style="margin:20px 0;"/>
-    <p style="font-size:12px; color:#777;">
-      This is a system-generated email. Please do not reply directly.
-    </p>
-  </div>
-`;
+    <p style="font-size:12px; color:#777;">This is a system-generated email. Please do not reply directly.</p>
+  </div>`;
+}
 
-// ✅ Function to send offer letter
 export default async function sendOfferLetterEmail(data) {
   try {
-    // ✅ Validate required fields
-    if (!data.name || !data.email || !data.company) {
-      throw new Error("Missing required fields: name, email, or company");
-    }
+    if (!data.name || !data.email) throw new Error("Missing required fields: name or email");
 
+    const mainCompany = data.company && companies[data.company] ? data.company : "Training Trains";
+    const transporter = getTransporter(mainCompany);
     const htmlContent = generateOfferLetterHTML(data);
 
     const info = await transporter.sendMail({
-      from: `"${data.company} HR Team" <${process.env.EMAIL_USER}>`,
+      from: `"${mainCompany} HR Team" <${companies[mainCompany].email}>`,
       to: data.email,
-      subject: `Internship Offer Letter - ${data.company}`,
+      subject: `Internship Offer Letter - ${mainCompany}`,
       html: htmlContent,
     });
 
-    console.log(`✅ Offer letter sent to ${data.email}: ${info.messageId}`);
+    console.log(`✅ Email sent from ${mainCompany} to ${data.email} [${info.messageId}]`);
     return true;
   } catch (error) {
     console.error("❌ Failed to send offer letter:", error.message);
